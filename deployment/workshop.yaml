@@ -4,7 +4,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ws001-api
-  # labels - istio 必要
+  # labels - istio 注入需要
   labels:
     app: ws001-api
 spec:
@@ -42,10 +42,10 @@ spec:
   selector:
     app: ws001-api
   ports:
-    # ports.name istio 必要
+    # ports.name istio 注入需要
     - name: http
       protocol: TCP
-      port: 7001
+      port: 80
       targetPort: 7001
 
 ######## ws002-pingpong #########
