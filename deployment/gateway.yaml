@@ -11,7 +11,7 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - "ares.example.com" # <--- 改成你的專屬 Domain
+        - "*" # <--- 改成你的專屬 Domain
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -30,4 +30,4 @@ spec:
         - destination:
             host: ws001-api
             port:
-              number: 80
+              number: 7001

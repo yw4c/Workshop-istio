@@ -1,0 +1,70 @@
+
+#apiVersion: networking.istio.io/v1alpha3
+#kind: VirtualService
+#metadata:
+#  name: ws001-api
+#spec:
+#  hosts:
+#    - ws001-api
+#  http:
+#    - route:
+#        - destination:
+#            host: ws001-api
+#      timeout: 0.5s
+#
+#---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fault-injection
+spec:
+  hosts:
+    - ws003-httpsvc
+  http:
+    - fault:
+#        delay:
+#          fixedDelay: 4s
+#          percentage:
+#            value: 100
+        # issue : works on grpc, not works on http
+        abort:
+          httpStatus: 504
+          percentage:
+            value: 50
+      route:
+        - destination:
+            host: ws003-httpsvc
+      retries:
+        attempts: 10
+        perTryTimeout: 1s
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: circuit-breaking
+spec:
+  host: ws003-httpsvc
+  trafficPolicy:
+    # 连接池
+    connectionPool:
+      http:
+        # 如果并发的连接和请求数超过一个，在 istio-proxy 进行进一步的请求和连接时，后续请求或 连接将被阻止。
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
+        http2MaxRequests: 1
+        #maxRetries
+      tcp:
+        maxConnections: 1
+        connectTimeout: 2.000s #grpc timeout not works
+    # 熔断檢測
+    outlierDetection:
+      # baseEjectionTime 實例將從負載均衡池剔除後，最短拒絕訪問時長。
+      baseEjectionTime: 180.000s
+      # 將實例從負載均衡池中剔除，需要連續的錯誤（HTTP5XX或者TCP斷開/超時）次數
+      consecutiveErrors: 1
+      # interval 間隔: 分析是否需要剔除的頻率
+      interval: 5.000s
+      # 服務在負載均衡池中被拒絕訪問（被移除）的最大百分比
+      maxEjectionPercent: 100
+
