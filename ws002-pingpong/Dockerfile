@@ -3,11 +3,11 @@ WORKDIR /app
 ENV GO111MODULE=on
 
 COPY . .
-RUN ls
 
 RUN apk update && apk upgrade && \
-    apk add --no-cache bash git openssh tar gzip curl
+    apk add --no-cache bash curl
 RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0  go build -o app
 
 CMD ["./app"]
 
+EXPOSE 7001

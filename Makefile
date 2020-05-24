@@ -9,6 +9,8 @@ gen_pb:
 	protoc -I ./ --go_out=plugins=grpc:. ./pb/pingpong.proto
 	# Generate reverse-proxy (.pb.gw.go)
 	protoc -I ./ --grpc-gateway_out=logtostderr=true:. ./pb/pingpong.proto
+	cp ./pb/*.go ./ws001-api/pb/
+	cp ./pb/*.go ./ws002-pingpong/pb/
 
 api.upgrade:
 	docker build -t gcr.io/silkrode-golang/ws001-api ./ws001-api

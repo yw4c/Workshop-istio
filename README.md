@@ -1,7 +1,19 @@
 # Work shop - istio
 ## required
-    * kubectl 
-    * istioctl
+* kubectl 
+````
+gcloud auth login
+gcloud config set project silkrode-golang
+gcloud container clusters get-credentials istio --region us-central1-c
+````
+* istioctl
+````
+export PATH=$PWD/bin:$PATH
+istioctl version
+````
+
+## Cluster
+* Istio 1.4.6 on GKE
 
 ## clone me
 ````
