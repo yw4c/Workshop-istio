@@ -1,0 +1,12 @@
+syntax = "proto3";
+package pingpong;
+
+service PingPongService {
+  rpc PingPongEndpoint (PingPong) returns (PingPong) {}
+}
+
+message PingPong{
+  int64 ping =1;
+  int64 pong =2;
+  int64 next =3;
+}

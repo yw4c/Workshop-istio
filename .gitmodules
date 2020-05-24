@@ -1,9 +1,0 @@
-[submodule "ws001-api"]
-	path = ws001-api
-	url = ares.chan.silkrode@gitlab.silkrode.com.tw:ares.chan.silkrode/ws001-api
-[submodule "ws002-pingpong"]
-	path = ws002-pingpong
-	url = ares.chan.silkrode@gitlab.silkrode.com.tw:ares.chan.silkrode/ws002-pingpong
-[submodule "pb"]
-	path = pb
-	url = ares.chan.silkrode@gitlab.silkrode.com.tw:ares.chan.silkrode/workshop-pb
