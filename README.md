@@ -1,5 +1,5 @@
 # Work shop - istio
-## required
+## Required
 * kubectl 
 ````
 gcloud auth login
@@ -15,11 +15,16 @@ istioctl version
 ## Cluster
 * Istio 1.4.6 on GKE
 
-## clone me
+## Clone me
 ````
-git submodule update --init --recursive \
-git submodule foreach git pull origin master \
+git submodule update --init --recursive &&
+git submodule foreach git pull origin master &&
 git submodule foreach git checkout master 
+````
+
+## Generate protobuf
+````
+make gen_pb
 ````
 
 

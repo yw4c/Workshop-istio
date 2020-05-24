@@ -1,3 +1,3 @@
 [submodule "pb"]
 	path = pb
-	url = https://gitlab.silkrode.com.tw/team_golang/workshop-istio.git
+	url = https://gitlab.silkrode.com.tw/ares.chan.silkrode/workshop-pb.git
