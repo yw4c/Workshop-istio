@@ -4,7 +4,11 @@ deploy:
 	kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
 
 gen_pb:
+	# go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+	# Generate gRPC stub (.pb.go)
 	protoc -I ./ --go_out=plugins=grpc:. ./pb/pingpong.proto
+	# Generate reverse-proxy (.pb.gw.go)
+	protoc -I ./ --grpc-gateway_out=logtostderr=true:. ./pb/pingpong.proto
 
 api.upgrade:
 	docker build -t gcr.io/silkrode-golang/ws001-api ./ws001-api

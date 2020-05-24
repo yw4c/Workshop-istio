@@ -2,144 +2,91 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	"log"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 	"os"
-	"reflect"
-	pingpong "ws001/pb"
-	"github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
-	"github.com/opentracing/opentracing-go"
+	"strings"
+	gw "ws001/pb"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 )
 
 func main() {
 
-	// log set up
+	// logger set up
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.DebugLevel)
 
+	// Server Addrs
 	const (
+		httpPort = ":7001"
 		WS002Addr = "ws002-pingpong:7002"
 		WS003Addr = "ws003-httpsvc:7003"
 	)
 
-	r:= gin.Default()
+	// init context
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	// health check for k8s service
-	r.GET("/",  func(c *gin.Context) {
-		c.String(200, "alive")
-		return
-	})
 
-	// Example ping-pong via gRPC
-	{
-		var opts []grpc.DialOption
-		opts = append(opts, grpc.WithInsecure())
-		opts = append(opts, grpc.WithStreamInterceptor(
-			grpc_opentracing.StreamClientInterceptor(
-				grpc_opentracing.WithTracer(opentracing.GlobalTracer()))))
-		opts = append(opts, grpc.WithUnaryInterceptor(
-			grpc_opentracing.UnaryClientInterceptor(
-				grpc_opentracing.WithTracer(opentracing.GlobalTracer()))))
-
-		conn, err := grpc.Dial(WS002Addr, opts...)
-		if err != nil {
-			log.Panicf("did not connect: %v", err)
-		}
-		r.GET("/api/pingpong", func(c *gin.Context) {
-			if err := doPingPong(conn); err != nil {
-				c.String(500, err.Error())
-				return
-			}
-			c.String(200, "pong !")
-			return
-		})
-	}
-
-	// Example invoke http service
-	{
-		zipkinHeaders := []string{
-			"X-Request-Id",
-			"X-B3-Traceid",
-			"X-B3-Spanid",
-			"X-B3-Parentspanid",
-			"X-B3-Sampled",
-			"X-B3-Flags",
-			"X-Ot-Span-Context",
-		}
-
-		r.GET("/api/httpsvc", func(c *gin.Context) {
-
-			logrus.Info("/api/httpsvc", "trace_id", c.Request.Header.Get("x-b3-traceid"))
-
-			client := &http.Client{}
-			req, err := http.NewRequest("GET", "http://"+WS003Addr, nil)
-			if err != nil {
-				c.String(500, err.Error())
-				return
-			}
-
-			// getForwardHeaders
-			for k := range c.Request.Header {
-				isZipkinHeader, _ :=  inArray(k, zipkinHeaders)
-				if isZipkinHeader{
-					req.Header.Add(k, c.Request.Header.Get(k))
-				}
-			}
-
-			logrus.Debug("ForwardHeaders ", req.Header)
-
-			resp, err := client.Do(req)
-			if err != nil {
-				c.String(500, err.Error())
-				return
-			}
-
-			if resp.StatusCode >= 500 {
-				c.String(500, "httpsvc response code: "+resp.Status)
-				return
-			}
-			c.String(200, "success !")
-		})
-	}
-
-	r.Run(":7001")
-}
-
-func doPingPong(conn *grpc.ClientConn) error{
-	client := pingpong.NewPingPongServiceClient(conn)
-
-	resp, err := client.PingPongEndpoint(context.Background(), &pingpong.PingPong{Ping:1})
+	annotators := []annotator{injectHeadersIntoMetadata}
+	mux := runtime.NewServeMux(
+		runtime.WithMetadata(chainGrpcAnnotators(annotators...)),
+	)
+	opts := []grpc.DialOption{grpc.WithInsecure()}
+	err := gw.RegisterPingPongServiceHandlerFromEndpoint(ctx, mux, WS002Addr, opts)
 	if err != nil {
-		return err
+		logrus.Fatal(err.Error())
 	}
-	if resp.GetPong() != 1 {
-		return fmt.Errorf("It is not pong !")
-	}
-	fmt.Println("received pong")
-	return nil
+
+	http.ListenAndServe(httpPort, mux)
+
+
 }
 
-func inArray(val interface{}, array interface{}) (exists bool, index int) {
-	exists = false
-	index = -1
 
-	switch reflect.TypeOf(array).Kind() {
-	case reflect.Slice:
-		s := reflect.ValueOf(array)
 
-		for i := 0; i < s.Len(); i++ {
-			if reflect.DeepEqual(val, s.Index(i).Interface()) == true {
-				index = i
-				exists = true
-				return
+// 註釋者: http 轉 grpc metadata
+type annotator func(context.Context, *http.Request) metadata.MD
+
+// 實現註釋者：轉換追蹤表頭
+func injectHeadersIntoMetadata(ctx context.Context, req *http.Request) metadata.MD {
+	//https://aspenmesh.io/2018/04/tracing-grpc-with-istio/
+	var (
+		otHeaders = []string{
+			"x-request-id",
+			"x-b3-traceid",
+			"x-b3-spanid",
+			"x-b3-parentspanid",
+			"x-b3-sampled",
+			"x-b3-flags",
+			"x-ot-span-context"}
+	)
+	var pairs []string
+
+	for k := range req.Header {
+		for _, h := range otHeaders {
+			if strings.ToLower(k) == h {
+				logrus.Debug("merging otHeader:" , h)
+				v := req.Header.Get(k)
+				pairs = append(pairs, h, v)
 			}
 		}
 	}
 
-	return
+	return metadata.Pairs(pairs...)
+}
+
+// 將所有註釋者 metadata 組合
+func chainGrpcAnnotators(annotators ...annotator) annotator {
+	return func(c context.Context, r *http.Request) metadata.MD {
+		var mds []metadata.MD
+		for _, a := range annotators {
+			mds = append(mds, a(c, r))
+		}
+		return metadata.Join(mds...)
+	}
 }
