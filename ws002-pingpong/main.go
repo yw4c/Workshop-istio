@@ -21,7 +21,7 @@ func main()  {
 	}
 
 	grpcSvc := grpc.NewServer()
-	pingpong.RegisterPingPongServiceServer(grpcSvc, &SvcA{})
+	pingpong.RegisterPingPongServiceServer(grpcSvc, &PingPongSvc{})
 	reflection.Register(grpcSvc)
 
 	if err:= grpcSvc.Serve(lis); err!= nil {
@@ -29,8 +29,8 @@ func main()  {
 	}
 }
 
-type SvcA struct{}
-func (*SvcA) PingPongEndpoint(ctx context.Context, req *pingpong.PingPong) ( resp *pingpong.PingPong, err error) {
+type PingPongSvc struct{}
+func (*PingPongSvc) PingPongEndpoint(ctx context.Context, req *pingpong.PingPong) ( resp *pingpong.PingPong, err error) {
 	logrus.Info("received ping")
 	return &pingpong.PingPong{
 		Pong:                 1,

@@ -1,7 +1,4 @@
 NAMESPACE ?= workshop
-deploy:
-	kubectl create namespace ${NAMESPACE}
-	kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
 
 gen_pb:
 	# go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway

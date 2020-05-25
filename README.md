@@ -151,7 +151,7 @@ kubectl delete -f deployment/fault-inject.yaml -n ${NAMESPACE}
     nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
 ````
 
-再搓看看
+再戳看看
 ````
 curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 ````
