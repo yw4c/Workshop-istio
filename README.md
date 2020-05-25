@@ -42,26 +42,26 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
 
 ## 觀察下 grpc 流向
 
-* 透果 proxy 從本地訪問 ws001-api
-````
-  nohup kubectl port-forward service/ws001-api 8080:7001 -n ${NAMESPACE} &
-````
+1. 透果 proxy 從本地訪問 ws001-api
+    ````
+      nohup kubectl port-forward service/ws001-api 8080:7001 -n ${NAMESPACE} &
+    ````
 
-* 查看 ws002-pingpong 每個 pod log, 看看是否被調用
+1. 查看 ws002-pingpong 每個 pod log, 看看是否被調用
 
-* 監控 pod 1
-````
- kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
-    app=ws002-pingpong | sed -n 1p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
-````
+1. 監控 pod 1
+    ````
+     kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
+        app=ws002-pingpong | sed -n 1p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
+    ````
 
-* 打打看 > curl http://localhost:8080/api/pingpong
+1. 打打看 > curl http://localhost:8080/api/pingpong
 
-* 監控 pod 2 
-````
- kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
-    app=ws002-pingpong | sed -n 2p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
-````
+1. 監控 pod 2 
+    ````
+     kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
+        app=ws002-pingpong | sed -n 2p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
+    ````
 
 * 使用 service, 我們發現 grpc 無法實現負載平衡. 
 * kube-proxy 只有在連線建立的當下，才成功做了負載均衡，之後的每一次 RPC 請求，都會利用原本的連線。
@@ -70,6 +70,8 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
 注入條件
 * 带有 metadata.labels.app  标签（label） 的 Deployment
 * 带有 spec.ports.name  的 Service
+
+開始注入
 ````
     # 新產生的 pod 會自動套用
     kubectl label namespace $NAMESPACE  istio-injection=enabled
@@ -78,7 +80,7 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
     kubectl apply -f <(istioctl kube-inject -f deployment/workshop.yaml) -n ${NAMESPACE}
 ````
 
-* 回上一步試看看，使否已預設輪循方式分流呢
+* 回上一步試看看，使否是已預設輪循方式分流
 
 ## Gateway 路由管理
 1. 在 deployment/gateway.yaml 更換專屬你的 domain
