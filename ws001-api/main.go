@@ -23,7 +23,6 @@ func main() {
 	const (
 		httpPort = ":7001"
 		WS002Addr = "ws002-pingpong:7002"
-		WS003Addr = "ws003-httpsvc:7003"
 	)
 
 	// init context

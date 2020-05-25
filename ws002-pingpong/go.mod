@@ -1,4 +1,4 @@
-module ws001
+module ws002
 
 go 1.14
 

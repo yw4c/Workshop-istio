@@ -10,4 +10,4 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0  go build -o app
 
 CMD ["./app"]
 
-EXPOSE 7001
+EXPOSE 7002
