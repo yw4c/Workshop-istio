@@ -27,9 +27,3 @@ pingpong.upgrade:
 	kubectl rollout restart deployment/ws002-pingpong -n ${NAMESPACE}
 	kubectl rollout status deployment ws002-pingpong -n ${NAMESPACE}
 
-httpsvc.upgrade:
-	docker build -t gcr.io/silkrode-golang/ws003-httpsvc ./ws003-httpsvc
-	docker push gcr.io/silkrode-golang/ws003-httpsvc:latest
-	kubectl set image deployment/ws003-httpsvc ws003-httpsvc=gcr.io/silkrode-golang/ws003-httpsvc:latest  -n ${NAMESPACE}
-	kubectl rollout restart deployment/ws003-httpsvc -n ${NAMESPACE}
-	kubectl rollout status deployment ws003-httpsvc -n ${NAMESPACE}
