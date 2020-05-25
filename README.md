@@ -1,30 +1,30 @@
-# Work shop - istio
+# Workshop - istio
 ## Required
-* kubectl 
+* gcloud, kubectl 
 ````
 gcloud auth login
 gcloud config set project silkrode-golang
 gcloud container clusters get-credentials istio --region us-central1-c
+kubectl get node
 ````
 * istioctl
 ````
-export PATH=$PWD/bin:$PATH
-istioctl version
+curl https://storage.googleapis.com/istio-build/dev/latest | xargs -I {} curl https://storage.googleapis.com/istio-build/dev/\{\}/istioctl-\{\}-osx.tar.gz | tar xvz
+./istioctl version
+cp ./istioctl /usr/local/bin
+
 ````
 
 ## Cluster
-* Istio 1.4.6 on GKE
+* Istio 1.7 alpha
 
 ## Clone me
 ````
+git clone https://gitlab.silkrode.com.tw/team_golang/workshop-istio.git &&
+cd workshop-istio &&
 git submodule update --init --recursive &&
 git submodule foreach git pull origin master &&
 git submodule foreach git checkout master 
-````
-
-## Generate protobuf
-````
-make gen_pb
 ````
 
 
@@ -36,7 +36,7 @@ export NAMESPACE=<your name>
 
 * 部署 pingpong 服務
 ````
-kubectl create namespace ${NAMESPACE} \
+kubectl create namespace ${NAMESPACE} &&
 kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
 ````
 
@@ -55,7 +55,7 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
     app=ws002-pingpong | sed -n 1p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
 ````
 
-* 打打看 > http://localhost:8080/api/pingpong
+* 打打看 > curl http://localhost:8080/api/pingpong
 
 * 監控 pod 2 
 ````
@@ -78,8 +78,14 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
     kubectl apply -f <(istioctl kube-inject -f deployment/workshop.yaml) -n ${NAMESPACE}
 ````
 
+* 回上一步試看看，使否已預設輪循方式分流呢
+
 ## Gateway 路由管理
 1. 在 deployment/gateway.yaml 更換專屬你的 domain
+1. 部署 gateway 和路由規則
+    ````
+        kubectl apply -f deployment/gateway.yaml -n ${NAMESPACE}
+    ````
 1. 取得叢集 istio-gateway 的 host ip
     ````
         export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -93,19 +99,21 @@ kubectl apply -f deployment/workshop.yaml -n ${NAMESPACE}
    
 ## 故障注入
 ````
-
+kubectl apply -f deployment/fault-inject.yaml -n ${NAMESPACE}  
+# 訪問看看注入效果
+curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
+kubectl delete -f deployment/fault-inject.yaml -n ${NAMESPACE}  
 ````
 
 ## 觀察指標(metrics)
 * 为了监控服务行为，Istio 为服务网格中所有出入的服务流量都生成了指标。这些指标提供了关于行为的信息，例如总流量数、错误率和请求响应时间。
 ````
- kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
+ nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
 ````
 
 * 觀測 ws002-pingpong 的被請求紀錄與流量，打開 http://127.0.0.1:9090/ ， 在 query 搜尋
 ````
-istio_requests_total{destination_service="ws002-pingpong.< 你的 NAMESPACE >.svc.cluster.local"}
-
+    istio_requests_total{destination_service="ws002-pingpong.< 你的 NAMESPACE >.svc.cluster.local"}
 ````
 
 * result
@@ -136,11 +144,13 @@ istio_requests_total{destination_service="ws002-pingpong.< 你的 NAMESPACE >.sv
 }
 ````
 
-## 錯誤熔斷
+## 鏈路追蹤
+````
+    nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
+````
 
-
-
-todo: 
-retry
-load balance advance
-how grpc loadbalance 
+再搓看看
+````
+curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
+````
+前往 http://localhost:15032/ 查看你的 service.namespace

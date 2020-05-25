@@ -1,0 +1,30 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: fault-injection
+spec:
+  hosts:
+    # service dns
+    - ws002-pingpong
+  http:
+    - fault:
+        # timout
+        delay:
+          fixedDelay: 4s
+          percentage:
+            value: 100
+        # 500 錯誤
+#        abort:
+#          httpStatus: 504
+#          percentage:
+#            value: 50
+      route:
+        - destination:
+            host: ws002-pingpong
+      # retry
+#      retries:
+#        attempts: 4
+#        perTryTimeout: 1s
+#        retryOn: "504"
+
+
