@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: ws001-api
-          image: gcr.io/silkrode-golang/ws001-api:latest
+          image: yw4code/ws001-api:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -73,7 +73,7 @@ spec:
     spec:
       containers:
         - name: ws002-pingpong
-          image: gcr.io/silkrode-golang/ws002-pingpong:latest
+          image: yw4code/ws002-pingpong:latest
           imagePullPolicy: Always
           ports:
             - name: grpc
