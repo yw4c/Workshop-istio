@@ -1,0 +1,76 @@
+# 判斷 path, e.g. /private
+# 打到指定 service
+# filter reference : https://help.aliyun.com/document_detail/158520.html
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: auth-filter
+  namespace: istio-system
+spec:
+#  workloadSelector:
+#    # select by label in the same namespace
+#    labels:
+#      istio: ingressgateway
+  # configPatches 具有匹配條件的一個或多個補丁
+  configPatches:
+  #  applyTo 指定在Envoy配置中的哪個位置應應用給定的補丁。
+  - applyTo: HTTP_FILTER
+    match:
+      # Gateway listener 會使用這補丁
+      context: GATEWAY
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.http_connection_manager"
+            subFilter:
+              name: "envoy.router"
+    patch:
+      operation: INSERT_BEFORE
+      value: # lua filter specification
+        name: envoy.lua
+        typed_config:
+          # api reference : https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/lua_filter
+          "@type": "type.googleapis.com/envoy.config.filter.http.lua.v2.Lua"
+          # func only trigger by path: /api
+          # auth-url: GET ws003-auth.ares.svc.local:7003/validate
+          # httpCall reference: https://discuss.istio.io/t/how-to-add-clusters-envoy-in-istio-for-envoyfilter/1133
+          inlineCode: |-
+            function envoy_on_request(request_handle)
+              local headers = request_handle:headers()
+
+              -- 檢查 path 是否需要驗證
+              path = headers:get(":path")
+              request_handle:logCritical("path" .. path)
+              if path:match("^/api") then
+                request_handle:logCritical("the path in rule")
+              else
+                request_handle:logCritical("the path not in rule, skip")
+                do return end
+              end
+
+              -- Get Token
+              local auth = headers:get("Authorization")
+
+              -- Invoke auth service, 轉發 token
+              local respHeaders, respBody = request_handle:httpCall(
+              "outbound|7003||ws003-auth.ares.svc.cluster.local",
+              {
+                [":method"] = "GET",
+                [":path"] = "/validate",
+                [":authority"] = "ws003-auth.ares.svc.cluster.local",
+                ["Authorization"] = auth,
+              },
+              "authorize call",
+              5000)
+
+              -- response status
+              local status =  respHeaders[":status"]
+              if tonumber(status)>=400 then
+                 -- Deny
+                 request_handle:respond(
+                     {[":status"] = "403"},
+                     "{Code: \"40300\", Msg: \"identity invalid\"}")
+                  do return end
+              end
+
+            end

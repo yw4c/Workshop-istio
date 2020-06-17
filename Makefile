@@ -24,3 +24,9 @@ pingpong.upgrade:
 	kubectl rollout restart deployment/ws002-pingpong -n ${NAMESPACE}
 	kubectl rollout status deployment ws002-pingpong -n ${NAMESPACE}
 
+auth.upgrade:
+	docker build -t yw4code/ws003-auth ./ws003-auth
+	docker image push yw4code/ws003-auth:latest
+	kubectl set image deployment/ws003-auth ws003-auth=yw4code/ws003-auth:latest -n ${NAMESPACE}
+	kubectl rollout restart deployment/ws003-auth -n ${NAMESPACE}
+	kubectl rollout status deployment ws003-auth -n ${NAMESPACE}

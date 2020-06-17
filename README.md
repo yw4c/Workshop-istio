@@ -156,3 +156,10 @@ kubectl delete -f deployment/fault-inject.yaml -n ${NAMESPACE}
 curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 ````
 前往 http://localhost:15032/ 查看你的 service.namespace
+
+
+## envoy filter
+````
+kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
+        app=ws003-auth | sed -n 1p) -c ws003-auth --tail=10 -n ${NAMESPACE}
+````
