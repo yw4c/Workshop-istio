@@ -5,20 +5,21 @@ apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
   name: auth-filter
-  namespace: istio-system
+  namespace: ares
 spec:
-#  workloadSelector:
-#    # select by label in the same namespace
-#    labels:
-#      istio: ingressgateway
-  # configPatches 具有匹配條件的一個或多個補丁
+  workloadSelector:
+    # select by label in the same namespace
+    labels:
+      app: ws001-api
+  # configPatches 具有匹配條件的一個或多個補丁kue
   configPatches:
   #  applyTo 指定在Envoy配置中的哪個位置應應用給定的補丁。
   - applyTo: HTTP_FILTER
     match:
       # Gateway listener 會使用這補丁
-      context: GATEWAY
+      context: SIDECAR_INBOUND
       listener:
+#        portNumber: 7001 # 不限定 service
         filterChain:
           filter:
             name: "envoy.http_connection_manager"
