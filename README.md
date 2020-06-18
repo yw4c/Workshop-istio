@@ -159,7 +159,13 @@ curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 
 
 ## envoy filter
+* ws003 負責用戶 token 驗證, 我們預設 Authorization:1234 就放行
+* 我們部署一 EnvoyFilter 中間層
 ````
-kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
-        app=ws003-auth | sed -n 1p) -c ws003-auth --tail=10 -n ${NAMESPACE}
+kubectl apply -f deployment/auth-filter.yaml -n ${NAMESPACE}
+````
+
+戳看看: 
+````
+curl -HHost:<你的專屬 domain> -H Authorization:6666  http://$INGRESS_HOST/api/pingpong
 ````
