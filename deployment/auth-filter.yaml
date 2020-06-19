@@ -10,7 +10,8 @@ spec:
   workloadSelector:
     # select by label in the same namespace
     labels:
-      app: ws001-api
+      auth-injection: enabled
+#      app: ws001-api
   # configPatches 具有匹配條件的一個或多個補丁kue
   configPatches:
   #  applyTo 指定在Envoy配置中的哪個位置應應用給定的補丁。

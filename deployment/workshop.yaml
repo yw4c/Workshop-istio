@@ -22,6 +22,7 @@ spec:
   template:
     metadata:
       labels:
+        auth-injection: enabled
         app: ws001-api
     spec:
       containers:
