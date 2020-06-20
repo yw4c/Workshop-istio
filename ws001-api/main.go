@@ -2,14 +2,16 @@ package main
 
 import (
 	"context"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"net/http"
 	"os"
 	"strings"
-	gw "ws001/pb"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	pingpong "ws001/pb"
+
+	//gw "ws001/pb"
 )
 
 func main() {
@@ -30,18 +32,61 @@ func main() {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-
-	annotators := []annotator{injectHeadersIntoMetadata}
-	mux := runtime.NewServeMux(
-		runtime.WithMetadata(chainGrpcAnnotators(annotators...)),
-	)
-	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err := gw.RegisterPingPongServiceHandlerFromEndpoint(ctx, mux, WS002Addr, opts)
+	// prepare gRPC connection
+	ws002Conn, err := grpc.Dial(WS002Addr, grpc.WithInsecure())
 	if err != nil {
-		logrus.Fatal(err.Error())
+		panic(err.Error())
 	}
+	ws002Cli := pingpong.NewPingPongServiceClient(ws002Conn)
 
-	http.ListenAndServe(httpPort, mux)
+	r := gin.Default()
+
+	// 透過 gRPC 請求 pingpong
+	r.GET("/public/api/pingpong", func(c *gin.Context) {
+		pingpong, err := ws002Cli.PingPongEndpoint(c.Request.Context(), &pingpong.PingPong{Ping:1})
+		if err != nil {
+			c.AbortWithError(404, err)
+			return
+		}
+		data := gin.H{
+			"msg": pingpong,
+		}
+		c.JSONP(http.StatusOK, data)
+		return
+	})
+
+	// 需要受 auth 驗證的 endpoint , 請參考 README - envoy filter 章節
+	r.GET("private/api/auth-info", func(c *gin.Context) {
+		logrus.Infof("%+v", c.Request.Header)
+		xSecret := c.Request.Header.Get("x-secret") // Was Set in ws003
+		if xSecret == "" {
+			data := gin.H{
+				"msg": "we didn't get x-secret",
+			}
+			c.JSONP(http.StatusUnauthorized, data)
+			return
+		}
+
+		data := gin.H{
+			"msg": "we got auth info "+ xSecret,
+		}
+		c.JSON(http.StatusOK, data)
+		return
+	})
+
+
+	// gRPC Gateway
+	//annotators := []annotator{injectHeadersIntoMetadata}
+	//mux := runtime.NewServeMux(
+	//	runtime.WithMetadata(chainGrpcAnnotators(annotators...)),
+	//)
+	//opts := []grpc.DialOption{grpc.WithInsecure()}
+	//err := gw.RegisterPingPongServiceHandlerFromEndpoint(ctx, mux, WS002Addr, opts)
+	//if err != nil {
+	//	logrus.Fatal(err.Error())
+	//}
+
+	r.Run(httpPort)
 
 
 }

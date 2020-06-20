@@ -21,7 +21,7 @@ func main() {
 			c.Status(403)
 			return
 		}
-		c.Header("X-Secret","{user-id:1}")
+		c.Writer.Header().Set("x-secret","{user-id:1}")
 		c.Status(200)
 		return
 	})

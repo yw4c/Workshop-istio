@@ -11,23 +11,4 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - "*" # <--- 改成你的專屬 Domain e.g. ares.workshop.com
----
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: api
-spec:
-  hosts:
-    - "*"
-  gateways:
-    - api-gateway
-  http:
-    - match:
-      - uri:
-          prefix: /api
-      route:
-        - destination:
-            host: ws001-api
-            port:
-              number: 7001
+        - "ares.workshop.com" # <--- 改成你的專屬 Domain e.g. ares.workshop.com

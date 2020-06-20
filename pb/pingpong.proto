@@ -1,15 +1,9 @@
 syntax = "proto3";
 package pingpong;
 
-import "google/api/annotations.proto";
 
 service PingPongService {
-  rpc PingPongEndpoint (PingPong) returns (PingPong) {
-      option (google.api.http) = {
-          get: "/api/pingpong"
-          // body: "*" // post required
-      };
-  }
+  rpc PingPongEndpoint (PingPong) returns (PingPong);
 }
 
 message PingPong{

@@ -1,11 +1,11 @@
-NAMESPACE ?= workshop
+NAMESPACE ?= ares
 
 gen_pb:
 	# go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	# Generate gRPC stub (.pb.go)
 	protoc -I ./ --go_out=plugins=grpc:. ./pb/pingpong.proto
 	# Generate reverse-proxy (.pb.gw.go)
-	protoc -I ./ --grpc-gateway_out=logtostderr=true:. ./pb/pingpong.proto
+	#protoc -I ./ --grpc-gateway_out=logtostderr=true:. ./pb/pingpong.proto
 	cp ./pb/*.go ./ws001-api/pb/
 	cp ./pb/*.go ./ws002-pingpong/pb/
 

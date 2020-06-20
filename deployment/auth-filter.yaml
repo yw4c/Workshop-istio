@@ -61,7 +61,7 @@ spec:
               -- 檢查 path 是否需要驗證
               path = headers:get(":path")
               request_handle:logCritical("path" .. path)
-              if path:match("^/api") then
+              if path:match("^/private") then
                 request_handle:logCritical("the path in rule")
               else
                 request_handle:logCritical("the path not in rule, skip")
@@ -89,8 +89,13 @@ spec:
                  -- Deny
                  request_handle:respond(
                      {[":status"] = "403"},
-                     "{Code: \"40300\", Msg: \"identity invalid\"}")
+                     "{Code: \"40300\", Msg: \"identity deny\"}")
                   do return end
               end
+
+              -- Merge response as context
+              request_handle:logCritical(respHeaders["x-secret"]) -- use lower letters
+              request_handle:headers():add("x-secret", respHeaders["x-secret"])
+              do return end
 
             end
