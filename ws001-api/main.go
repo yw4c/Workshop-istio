@@ -11,7 +11,6 @@ import (
 	"strings"
 	pingpong "ws001/pb"
 
-	//gw "ws001/pb"
 )
 
 func main() {
@@ -41,9 +40,22 @@ func main() {
 
 	r := gin.Default()
 
+
+
 	// 透過 gRPC 請求 pingpong
 	r.GET("/public/api/pingpong", func(c *gin.Context) {
-		pingpong, err := ws002Cli.PingPongEndpoint(c.Request.Context(), &pingpong.PingPong{Ping:1})
+		ctx := c.Request.Context()
+
+		// 注入來自 http 的追蹤表頭到 metadata
+		md := injectHeadersIntoMetadata(ctx, c.Request)
+		logrus.WithField("requestID", md.Get("x-request-id")).
+			WithField("traceID", md.Get("x-b3-traceid")).
+			WithField("spanID", md.Get("x-b3-spanid")).Info("Tracing Info")
+		ctx = metadata.NewOutgoingContext(ctx, md)
+
+
+		// 請求 grpc to ws002
+		pingpong, err := ws002Cli.PingPongEndpoint(ctx, &pingpong.PingPong{Ping:1})
 		if err != nil {
 			c.AbortWithError(404, err)
 			return
@@ -75,28 +87,12 @@ func main() {
 	})
 
 
-	// gRPC Gateway
-	//annotators := []annotator{injectHeadersIntoMetadata}
-	//mux := runtime.NewServeMux(
-	//	runtime.WithMetadata(chainGrpcAnnotators(annotators...)),
-	//)
-	//opts := []grpc.DialOption{grpc.WithInsecure()}
-	//err := gw.RegisterPingPongServiceHandlerFromEndpoint(ctx, mux, WS002Addr, opts)
-	//if err != nil {
-	//	logrus.Fatal(err.Error())
-	//}
-
 	r.Run(httpPort)
 
 
 }
 
-
-
-// 註釋者: http 轉 grpc metadata
-type annotator func(context.Context, *http.Request) metadata.MD
-
-// 實現註釋者：轉換追蹤表頭
+// injectHeadersIntoMetadata：轉換追蹤表頭
 func injectHeadersIntoMetadata(ctx context.Context, req *http.Request) metadata.MD {
 	//https://aspenmesh.io/2018/04/tracing-grpc-with-istio/
 	var (
@@ -122,15 +118,4 @@ func injectHeadersIntoMetadata(ctx context.Context, req *http.Request) metadata.
 	}
 
 	return metadata.Pairs(pairs...)
-}
-
-// 將所有註釋者 metadata 組合
-func chainGrpcAnnotators(annotators ...annotator) annotator {
-	return func(c context.Context, r *http.Request) metadata.MD {
-		var mds []metadata.MD
-		for _, a := range annotators {
-			mds = append(mds, a(c, r))
-		}
-		return metadata.Join(mds...)
-	}
 }

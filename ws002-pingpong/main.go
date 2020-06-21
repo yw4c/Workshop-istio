@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 	"log"
 	"net"
 	"os"
@@ -31,6 +32,16 @@ func main()  {
 
 type PingPongSvc struct{}
 func (*PingPongSvc) PingPongEndpoint(ctx context.Context, req *pingpong.PingPong) ( resp *pingpong.PingPong, err error) {
+
+	// 取得 trace 表頭
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		logrus.Error("get metadata error")
+	}
+	logrus.WithField("requestID", md.Get("x-request-id")).
+		WithField("traceID", md.Get("x-b3-traceid")).
+		WithField("spanID", md.Get("x-b3-spanid")).Info("Tracing Info")
+
 	logrus.Info("received ping")
 	return &pingpong.PingPong{
 		Pong:                 1,
