@@ -38,9 +38,8 @@ func main() {
 	}
 	ws002Cli := pingpong.NewPingPongServiceClient(ws002Conn)
 
+
 	r := gin.Default()
-
-
 
 	// 透過 gRPC 請求 pingpong
 	r.GET("/public/api/pingpong", func(c *gin.Context) {
@@ -48,9 +47,6 @@ func main() {
 
 		// 注入來自 http 的追蹤表頭到 metadata
 		md := injectHeadersIntoMetadata(ctx, c.Request)
-		logrus.WithField("requestID", md.Get("x-request-id")).
-			WithField("traceID", md.Get("x-b3-traceid")).
-			WithField("spanID", md.Get("x-b3-spanid")).Info("Tracing Info")
 		ctx = metadata.NewOutgoingContext(ctx, md)
 
 
@@ -110,12 +106,18 @@ func injectHeadersIntoMetadata(ctx context.Context, req *http.Request) metadata.
 	for k := range req.Header {
 		for _, h := range otHeaders {
 			if strings.ToLower(k) == h {
-				logrus.Debug("merging otHeader:" , h)
+				//logrus.Debug("merging otHeader:" , h)
 				v := req.Header.Get(k)
 				pairs = append(pairs, h, v)
 			}
 		}
 	}
 
-	return metadata.Pairs(pairs...)
+	md := metadata.Pairs(pairs...)
+
+	logrus.WithField("requestID", md.Get("x-request-id")).
+		WithField("traceID", md.Get("x-b3-traceid")).
+		WithField("spanID", md.Get("x-b3-spanid")).Info("Tracing Info")
+
+	return md
 }

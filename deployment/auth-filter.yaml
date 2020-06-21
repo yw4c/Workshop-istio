@@ -57,10 +57,12 @@ spec:
           inlineCode: |-
             function envoy_on_request(request_handle)
               local headers = request_handle:headers()
+              request_handle:logCritical("x-request-id:" .. headers:get("x-request-id"))
+              request_handle:logCritical("x-b3-traceid:" .. headers:get("x-b3-traceid"))
 
               -- 檢查 path 是否需要驗證
               path = headers:get(":path")
-              request_handle:logCritical("path" .. path)
+              -- request_handle:logCritical("path" .. path)
               if path:match("^/private") then
                 request_handle:logCritical("the path in rule")
               else
@@ -79,6 +81,13 @@ spec:
                 [":path"] = "/validate",
                 [":authority"] = "ws003-auth.ares.svc.cluster.local",
                 ["Authorization"] = auth,
+                ["x-request-id"] = headers:get("x-request-id"),
+                ["x-b3-traceid"] = headers:get("x-b3-traceid"),
+                ["x-b3-spanid"] = headers:get("x-b3-spanid"),
+                ["x-b3-parentspanid"] = headers:get("x-b3-parentspanid"),
+                ["x-b3-sampled"] = headers:get("x-b3-sampled"),
+                ["x-b3-flags"] = headers:get("x-b3-flags"),
+                ["x-ot-span-context"] = headers:get("x-ot-span-context"),
               },
               "authorize call",
               5000)
@@ -89,7 +98,7 @@ spec:
                  -- Deny
                  request_handle:respond(
                      {[":status"] = "403"},
-                     "{Code: \"40300\", Msg: \"identity deny\"}")
+                     "{\"Code\": \"40300\", \"Msg\": \"identity deny\"}")
                   do return end
               end
 

@@ -15,6 +15,15 @@ func main() {
 
 	// Server Addrs
 	r := gin.Default()
+
+	// Log tracing info
+	r.Use(func(context *gin.Context) {
+		logrus.WithField("x-request-id", context.Request.Header.Get("x-request-id")).
+			WithField("x-b3-traceid", context.Request.Header.Get("x-b3-traceid")).
+			WithField("URI", context.Request.Method + context.Request.RequestURI).
+			Info("Tracing Info")
+	})
+
 	r.GET("/validate", func(c *gin.Context) {
 		logrus.Info("auth", c.Request.Header.Get("Authorization"))
 		if c.Request.Header.Get("Authorization") != "1234" {

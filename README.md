@@ -160,6 +160,7 @@ curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 
 ## envoy filter
 * ws003 負責用戶 token 驗證, 我們預設 Authorization:1234 就放行
+![private request flow](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgUHJpdmF0ZSBSZXF1ZXN0IEZsb3cKCktPL0tNIFxuIEZyb250ZW5kLT7lhaXlj6PntrLpl5wgXG4gaXN0aW8taW5ncmVzc2dhdGV3YXk6CgACJC0-SFRUUAA7DyAAPAcgQ1JEOiBbT10gaHR0cDovL2tiYy5iYWNrZW5kLmNvbSBcbltYABQJNjY2ABAFCgAzHy0-U2VydmljZSBQcm94eQBsClZpcnR1YWwAFggAdAkvcHVibGljL2FwaSBcbgAMBgCCJAYvYXBpCgAlKS0-QXV0aCBNaWRkbGV3YXJlAIFnCkVudm95RmlsdGVyAIFvBiBsYWJlbACCVwVkZW50aXR5LXZhbGlkYXRpb246ZW5hYmxlZAoAKCgtPkkAPwcgAIF1BwCBUggAg2sHAIJDBgCBYgcKAB0QACwT6amX6K2JIHRva2VuAB0TAIE_Kk9LIQCBHCtDZXJ0YWluAIE9CQoAAg8tPgCFHRE6Cg&s=napkin)
 * 我們部署一 EnvoyFilter 中間層
 ````
 kubectl apply -f deployment/auth-filter.yaml -n ${NAMESPACE}
@@ -168,4 +169,7 @@ kubectl apply -f deployment/auth-filter.yaml -n ${NAMESPACE}
 戳看看: 
 ````
 curl -HHost:<你的專屬 domain> -H Authorization:6666  http://$INGRESS_HOST/api/pingpong
+// response: {Code: "40300", Msg: "identity deny"}
+curl -HHost:<你的專屬 domain> -H Authorization:1234  http://$INGRESS_HOST/api/pingpong
+// response {"msg": "we got auth info {user-id:1}"}
 ````
