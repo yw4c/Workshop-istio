@@ -1,4 +1,4 @@
-
+# Depends 030-auth-filter
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
@@ -25,30 +25,31 @@ spec:
           config:
             inlineCode: |-
               function envoy_on_request(request_handle)
-                request_handle:logCritical("v3")
+
+                request_handle:logCritical("v2")
                 local headers = request_handle:headers()
 
+                -- request headers
                 local path = headers:get(":path")
                 local method = headers:get(":method")
                 local xff = headers:get("x-forwarded-for")
                 local xsecret = headers:get("x-secret")
                 local requestId = headers:get("x-request-id")
 
+                -- request body
                 local requestBody = ""
-                local index = 0
-                for chunk in request_handle:bodyChunks() do
-                  local len = chunk:length()
-                  local result = chunk:getBytes(index, len)
-                  index = index + len
-                  requestBody = requestBody..result
+                if (request_handle:body()~=nil) then
+                  requestBody = request_handle:body():getBytes(0, request_handle:body():length())
                 end
 
+                -- 塞進 context 給 response
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "path", path)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "method", method)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xff", xff)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xsecret", xsecret)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestId", requestId)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestBody", requestBody)
+
               end
     - applyTo: HTTP_FILTER
       match:
@@ -79,7 +80,7 @@ spec:
 
                 if (xsecret == nil) then xsecret = "" end
 
-                jsonPaylog = "{\"logName\": \"ENVOY_ACCESS_LOG\",\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"requestBody\":\""..requestBody.."\",\"xsecret\":\""..xsecret.."\",\"requestId\":\""..requestId.."\"}"
+                jsonPaylog = "{\"logName\": \"ACCESS_LOG_FILTER\",\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"requestBody\":\""..requestBody.."\",\"xsecret\":\""..xsecret.."\",\"requestId\":\""..requestId.."\"}"
                 response_handle:logCritical(jsonPaylog)
 
 
