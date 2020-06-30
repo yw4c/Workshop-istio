@@ -25,19 +25,30 @@ spec:
           config:
             inlineCode: |-
               function envoy_on_request(request_handle)
+                request_handle:logCritical("v3")
                 local headers = request_handle:headers()
 
-                path = headers:get(":path")
-                method = headers:get(":method")
-                xff = headers:get("x-forwarded-for")
-                xsecret = headers:get("x-secret")
-                requestid = headers:get("x-request-id")
+                local path = headers:get(":path")
+                local method = headers:get(":method")
+                local xff = headers:get("x-forwarded-for")
+                local xsecret = headers:get("x-secret")
+                local requestId = headers:get("x-request-id")
+
+                local requestBody = ""
+                local index = 0
+                for chunk in request_handle:bodyChunks() do
+                  local len = chunk:length()
+                  local result = chunk:getBytes(index, len)
+                  index = index + len
+                  requestBody = requestBody..result
+                end
 
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "path", path)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "method", method)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xff", xff)
                 request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xsecret", xsecret)
-                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestid", requestid)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestId", requestId)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestBody", requestBody)
               end
     - applyTo: HTTP_FILTER
       match:
@@ -63,11 +74,13 @@ spec:
                 method = context["method"]
                 xff = context["xff"]
                 xsecret = context["xsecret"]
-                requestid = context["requestid"]
+                requestId = context["requestId"]
+                requestBody = context["requestBody"]
 
                 if (xsecret == nil) then xsecret = "" end
 
-                jsonPaylog = "{\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"xsecret\":\""..xsecret.."\",\"requestid\":\""..requestid.."\"}"
-                print("{\"logName\": \"ACCESS_LOG\",\"jsonPayload\":"..jsonPaylog.."}")
+                jsonPaylog = "{\"logName\": \"ENVOY_ACCESS_LOG\",\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"requestBody\":\""..requestBody.."\",\"xsecret\":\""..xsecret.."\",\"requestId\":\""..requestId.."\"}"
+                response_handle:logCritical(jsonPaylog)
+
 
               end

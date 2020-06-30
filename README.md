@@ -1,13 +1,19 @@
-# Deployment
+# Quick Start
 1. deploy micro services
     ````
         kubectl apply -f deployment/microservices -n ${NAMESPACE}
     ````
-1. deploy ordering istio CRDs, 這裡的 crds 有順序性
+1. deploy ordering istio CRDs, 這裡的 CRDs 有順序性, 若順序有異動要全砍重來
     ````
-        make reload-ordering 
+        make reload-ordering
     ````
-
+1. test accesslog-filter
+````
+    // get
+    curl -HHost:"ares.workshop.com" -H Authorization:1234 http://10.20.0.164:31380/private/api/auth-info\?foo\=bar -L -v
+    // post
+    curl -HHost:"ares.workshop.com" -H Authorization:1234 -X POST --data "foo=bar" http://10.20.0.164:31380/private/api/auth-info 
+````
 
 # Workshop - istio
 ## Required
