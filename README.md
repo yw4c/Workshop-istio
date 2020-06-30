@@ -1,3 +1,14 @@
+# Deployment
+1. deploy micro services
+    ````
+        kubectl apply -f deployment/microservices -n ${NAMESPACE}
+    ````
+1. deploy ordering istio CRDs, 這裡的 crds 有順序性
+    ````
+        make reload-ordering 
+    ````
+
+
 # Workshop - istio
 ## Required
 * gcloud, kubectl 

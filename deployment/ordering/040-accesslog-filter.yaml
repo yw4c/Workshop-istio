@@ -1,0 +1,73 @@
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: accesslog-filter
+  namespace: ares
+spec:
+  workloadSelector:
+    labels:
+      app: ws001-api
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.http_connection_manager"
+              subFilter:
+                name: "envoy.router"
+      patch:
+        operation: INSERT_BEFORE
+        value: # lua filter specification
+          name: envoy.lua
+          config:
+            inlineCode: |-
+              function envoy_on_request(request_handle)
+                local headers = request_handle:headers()
+
+                path = headers:get(":path")
+                method = headers:get(":method")
+                xff = headers:get("x-forwarded-for")
+                xsecret = headers:get("x-secret")
+                requestid = headers:get("x-request-id")
+
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "path", path)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "method", method)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xff", xff)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "xsecret", xsecret)
+                request_handle:streamInfo():dynamicMetadata():set("envoy.filters.http.lua", "requestid", requestid)
+              end
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: "envoy.http_connection_manager"
+              subFilter:
+                name: "envoy.router"
+      patch:
+        operation: INSERT_BEFORE
+        value: # lua filter specification
+          name: envoy.lua
+          config:
+            inlineCode: |-
+              function envoy_on_response(response_handle)
+
+                local status = response_handle:headers():get(":status")
+                local context = response_handle:streamInfo():dynamicMetadata():get("envoy.filters.http.lua")
+
+                path = context["path"]
+                method = context["method"]
+                xff = context["xff"]
+                xsecret = context["xsecret"]
+                requestid = context["requestid"]
+
+                if (xsecret == nil) then xsecret = "" end
+
+                jsonPaylog = "{\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"xsecret\":\""..xsecret.."\",\"requestid\":\""..requestid.."\"}"
+                print("{\"logName\": \"ACCESS_LOG\",\"jsonPayload\":"..jsonPaylog.."}")
+
+              end

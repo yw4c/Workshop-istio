@@ -30,3 +30,8 @@ auth.upgrade:
 	kubectl set image deployment/ws003-auth ws003-auth=yw4code/ws003-auth:latest -n ${NAMESPACE}
 	kubectl rollout restart deployment/ws003-auth -n ${NAMESPACE}
 	kubectl rollout status deployment ws003-auth -n ${NAMESPACE}
+
+reload-ordering:
+	kubectl delete -f ./deployment/ordering -n ${NAMESPACE}
+	kubectl apply -f ./deployment/ordering/030-auth-filter.yaml -n ${NAMESPACE}
+	kubectl apply -f ./deployment/ordering/040-accesslog-filter.yaml -n ${NAMESPACE}

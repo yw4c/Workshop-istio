@@ -64,7 +64,7 @@ func main() {
 	})
 
 	// 需要受 auth 驗證的 endpoint , 請參考 README - envoy filter 章節
-	r.GET("private/api/auth-info", func(c *gin.Context) {
+	r.POST("private/api/auth-info", func(c *gin.Context) {
 		logrus.Infof("%+v", c.Request.Header)
 		xSecret := c.Request.Header.Get("x-secret") // Was Set in ws003
 		if xSecret == "" {
