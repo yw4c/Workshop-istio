@@ -78,10 +78,14 @@ spec:
                 requestId = context["requestId"]
                 requestBody = context["requestBody"]
 
-                if (xsecret == nil) then xsecret = "" end
+                requestBody = string.gsub(requestBody,"\"","\\\"")
+                xsecret = string.gsub(xsecret,"\"","\\\"")
 
                 jsonPaylog = "{\"logName\": \"ACCESS_LOG_FILTER\",\"status\":"..status..",\"path\":\""..path.."\",\"method\":\""..method.."\",\"xff\":\""..xff.."\",\"requestBody\":\""..requestBody.."\",\"xsecret\":\""..xsecret.."\",\"requestId\":\""..requestId.."\"}"
-                response_handle:logCritical(jsonPaylog)
+                print(jsonPaylog)
+
+                -- response 戴上 x-request-id
+                response_handle:headers():add("X-Request-ID", requestId)
 
 
               end
