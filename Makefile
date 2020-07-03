@@ -33,5 +33,5 @@ auth.upgrade:
 
 reload-ordering:
 	#kubectl delete -f ./deployment/ordering -n ${NAMESPACE}
-	kubectl apply -f ./deployment/ordering/030-auth-filter.yaml -n ${NAMESPACE}
-	kubectl apply -f ./deployment/ordering/040-accesslog-filter.yaml -n ${NAMESPACE}
+	kubectl apply -f ./deployment/http-filter/030-auth-filter.yaml -n ${NAMESPACE}
+	kubectl apply -f ./deployment/http-filter/040-accesslog-filter.yaml -n ${NAMESPACE}
