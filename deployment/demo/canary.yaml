@@ -1,0 +1,34 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: subset-selector
+spec:
+  host: ws002-pingpong
+  trafficPolicy:
+    loadBalancer:
+      simple: ROUND_ROBIN
+  subsets:
+    - name: current
+      labels:
+        version: current
+    - name: prev
+      labels:
+        version: prev
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ws002-pingpong-canary
+spec:
+  hosts:
+    - ws002-pingpong
+  http:
+    - route:
+        - destination:
+            host: ws002-pingpong
+            subset: current
+          weight: 100
+        - destination:
+            host: ws002-pingpong
+            subset: prev
+          weight: 0

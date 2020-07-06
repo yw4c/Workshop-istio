@@ -78,6 +78,9 @@ spec:
                 requestId = context["requestId"]
                 requestBody = context["requestBody"]
 
+                if (xsecret == nil) then xsecret = "" end
+                if (xff == nil) then xff = "" end
+
                 requestBody = string.gsub(requestBody,"\"","\\\"")
                 xsecret = string.gsub(xsecret,"\"","\\\"")
 

@@ -1,0 +1,22 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: retry
+spec:
+  hosts:
+    - ws002-pingpong
+  tcp:
+    - timeout: 3s
+      route:
+        - destination:
+            host: ws002-pingpong
+            port:
+              number: 7002
+      retries:
+        attempts: 3
+        # perTryTimeout: timeout 需值大於 perTryTimeout，因此您確實需要一些時間來進行下一次重試。
+        perTryTimeout: 1s
+        # retryOn: @reference https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/router_filter#x-envoy-retry-on
+        # check metric of client sidecar :  kubectl exec -it ws001-api-6799b5f9d5-46z5s -c istio-proxy -n ares pilot-agent request GET stats | grep -i ret
+        retryOn: unavailable,cancelled,deadline-exceeded,internal,resource-exhausted,connect-failure,gateway-error,refused-stream
+
