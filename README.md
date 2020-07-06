@@ -1,5 +1,9 @@
+# Content
+* [Quick Start](#Quick-Start)
+* [金絲雀部署](#金絲雀部署)
+
 # Quick Start
-1. deploy micro services
+1. Init deployment of micro services
     ````
         kubectl apply -f deployment/microservices -n ${NAMESPACE}
     ````
@@ -14,6 +18,19 @@
         // post
         curl -HHost:"ares.workshop.com" -H Authorization:1234 -X POST --data "foo=bar" http://10.20.0.164:31380/private/api/auth-info 
     ````
+## 維運
+### 金絲雀部署
+* 修改 virtual service 權重
+````
+ kubectl apply -f deployment/microservices/020-virtual-service.yaml -n ares  
+````
+* 部署流程
+    1. green weight 0%, replica = 0; blue weight 100%, replica = 2
+    1. 升級 green 到新版本 : green weight 0%, replica = 2; blue weight 100%, replica = 2
+    1. 將一半流量導到 green, 此時4個 pod 共同負載 : green weight 50%, replica = 2; blue weight 0%, replica = 2
+    1. 轉移全部流量 -  green weight 100%, replica = 2; blue weight 0%, replica = 2
+    1. 穩定後關閉 blue - green : green weight 100%, replica = 2; blue weight 0%, replica = 0
+
 
 # Workshop - istio
 ## Required
