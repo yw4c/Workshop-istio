@@ -28,7 +28,7 @@ spec:
     - ws002-pingpong
   http:
     - route:
-        # 金絲雀部署
+        # 金絲雀部署: 調整流量請 kubectl edit , 勿更新此檔
         - destination:
             host: ws002-pingpong
             subset: blue

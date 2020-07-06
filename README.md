@@ -24,7 +24,7 @@
 ````
  kubectl apply -f deployment/microservices/020-virtual-service.yaml -n ares  
 ````
-* 部署流程
+* 部署流程：
     1. green weight 0%, replica = 0; blue weight 100%, replica = 2
     1. 升級 green 到新版本 : green weight 0%, replica = 2; blue weight 100%, replica = 2
     1. 將一半流量導到 green, 此時4個 pod 共同負載 : green weight 50%, replica = 2; blue weight 0%, replica = 2
