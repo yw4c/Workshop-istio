@@ -27,8 +27,8 @@ spec:
         - destination:
             host: ws002-pingpong
             subset: current
-          weight: 100
+          weight: 50
         - destination:
             host: ws002-pingpong
             subset: prev
-          weight: 0
+          weight: 50

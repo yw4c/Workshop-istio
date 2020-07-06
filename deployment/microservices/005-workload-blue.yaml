@@ -33,37 +33,23 @@ spec:
             - name: http
               containerPort: 7001
               protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ws001-api
-spec:
-  type: NodePort
-  selector:
-    app: ws001-api
-  ports:
-    # ports.name istio 注入需要
-    - name: http
-      protocol: TCP
-      port: 7001
-      targetPort: 7001
+
 
 ######## ws002-pingpong #########
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ws002-pingpong
+  name: ws002-pingpong-blue
   labels:
     app: ws002-pingpong
-    version: current
+    version: blue
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: ws002-pingpong
-      version: current
+      version: blue
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -73,7 +59,7 @@ spec:
     metadata:
       labels:
         app: ws002-pingpong
-        version: current
+        version: blue
     spec:
       containers:
         - name: ws002-pingpong
@@ -83,53 +69,6 @@ spec:
             - name: grpc
               containerPort: 7002
               protocol: TCP
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ws002-pingpong-prev
-  labels:
-    app: ws002-pingpong
-    version: prev
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: ws002-pingpong
-      version: prev
-  strategy:
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
-    type: RollingUpdate
-  template:
-    metadata:
-      labels:
-        app: ws002-pingpong
-        version: prev
-    spec:
-      containers:
-        - name: ws002-pingpong
-          image: yw4code/ws002-pingpong:prev
-          imagePullPolicy: Always
-          ports:
-            - name: grpc
-              containerPort: 7002
-              protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ws002-pingpong
-spec:
-  type: NodePort
-  selector:
-    app: ws002-pingpong
-  ports:
-    - name: grpc
-      protocol: TCP
-      port: 7002
-      targetPort: 7002
 ---
 ######## ws003-auth #########
 apiVersion: apps/v1
@@ -164,18 +103,3 @@ spec:
             - name: http
               containerPort: 7003
               protocol: TCP
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: ws003-auth
-spec:
-  type: NodePort
-  selector:
-    app: ws003-auth
-  ports:
-    # ports.name istio 注入需要
-    - name: http
-      protocol: TCP
-      port: 7003
-      targetPort: 7003
