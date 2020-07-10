@@ -105,6 +105,12 @@ spec:
               -- Merge response as context
               -- request_handle:logCritical(respHeaders["x-secret"]) -- use lower letters
               request_handle:headers():add("x-secret", respHeaders["x-secret"])
+
+              -- option header should be added like this
+              if (respHeaders["x-kbc-km"] ~= nil) then
+                  request_handle:headers():add("x-kbc-km", respHeaders["x-kbc-km"])
+              end
+
               do return end
 
             end

@@ -12,3 +12,5 @@ spec:
         protocol: HTTP
       hosts:
         - "ares.workshop.com" # <--- 改成你的專屬 Domain e.g. ares.workshop.com
+        - "sit.ares.workshop.com"
+        - "prod.ares.workshop.com"

@@ -17,6 +17,18 @@ spec:
             host: ws001-api
             port:
               number: 7001
+      corsPolicy:
+        allowOrigin:
+          - "*"
+        allowMethods:
+          - POST
+          - GET
+          - OPTIONS
+          - PUT
+          - DELETE
+        allowCredentials: true
+        allowHeaders:
+          - "*"
 ---
 # ws002-pingpong
 apiVersion: networking.istio.io/v1alpha3
