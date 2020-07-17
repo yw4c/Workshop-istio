@@ -1,14 +1,15 @@
-# 路由規則
+# ws001-api
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: api
+  name: ws001-api
 spec:
   hosts:
     - "*"
   gateways:
     - api-gateway
   http:
+    # 路由規則
     - match:
         - uri:
             regex: .*\/(private|public)\/api\/.*
@@ -17,6 +18,15 @@ spec:
             host: ws001-api
             port:
               number: 7001
+            subset: blue
+          weight: 100
+        - destination:
+            host: ws001-api
+            port:
+              number: 7001
+            subset: green
+          weight: 0
+      # CORS
       corsPolicy:
         allowOrigin:
           - "*"
@@ -29,6 +39,7 @@ spec:
         allowCredentials: true
         allowHeaders:
           - "*"
+
 ---
 # ws002-pingpong
 apiVersion: networking.istio.io/v1alpha3
@@ -47,5 +58,25 @@ spec:
           weight: 100
         - destination:
             host: ws002-pingpong
+            subset: green
+          weight: 0
+---
+# ws003-auth
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: ws003-auth
+spec:
+  hosts:
+    - ws003-auth
+  http:
+    - route:
+        # 金絲雀部署: 調整流量請 kubectl edit , 勿更新此檔
+        - destination:
+            host: ws003-auth
+            subset: blue
+          weight: 100
+        - destination:
+            host: ws003-auth
             subset: green
           weight: 0

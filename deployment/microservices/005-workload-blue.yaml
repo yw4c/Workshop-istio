@@ -3,15 +3,17 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ws001-api
+  name: ws001-api-blue
   # labels - istio 注入需要
   labels:
     app: ws001-api
+    version: blue
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: ws001-api
+      version: blue
   strategy:
     rollingUpdate:
       # maxSurge:  e.g. maxSurge: 1、replicas: 5，代表 Kubernetes 會先開好 1 個新 pod 後才刪掉一個舊的 pod，整個升級過程中最多會有 5+1 個 pod
@@ -24,6 +26,7 @@ spec:
       labels:
         auth-injection: enabled
         app: ws001-api
+        version: blue
     spec:
       containers:
         - name: ws001-api
@@ -74,15 +77,17 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ws003-auth
+  name: ws003-auth-blue
   # labels - istio 注入需要
   labels:
     app: ws003-auth
+    version: blue
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: ws003-auth
+      version: blue
   strategy:
     rollingUpdate:
       # maxSurge:  e.g. maxSurge: 1、replicas: 5，代表 Kubernetes 會先開好 1 個新 pod 後才刪掉一個舊的 pod，整個升級過程中最多會有 5+1 個 pod
@@ -94,6 +99,7 @@ spec:
     metadata:
       labels:
         app: ws003-auth
+        version: blue
     spec:
       containers:
         - name: ws003-auth
