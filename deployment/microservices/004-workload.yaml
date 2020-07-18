@@ -1,0 +1,34 @@
+######## ws003-auth #########
+## 被 envoy filter 調用，其 Virtual service 無效, 無法 canary
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws003-auth
+  # labels - istio 注入需要
+  labels:
+    app: ws003-auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ws003-auth
+  strategy:
+    rollingUpdate:
+      # maxSurge:  e.g. maxSurge: 1、replicas: 5，代表 Kubernetes 會先開好 1 個新 pod 後才刪掉一個舊的 pod，整個升級過程中最多會有 5+1 個 pod
+      maxSurge: 1
+      # maxUnavailable: e.g. maxUnavailable: 1，代表 Kubernetes 整個升級過程中最多會有 1 個 pod 處在無法服務的狀態
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ws003-auth
+    spec:
+      containers:
+        - name: ws003-auth
+          image: yw4code/ws003-auth:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 7003
+              protocol: TCP

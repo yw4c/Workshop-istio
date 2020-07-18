@@ -11,6 +11,7 @@ spec:
         name: http
         protocol: HTTP
       hosts:
+        # 和 http-path.http-path 同步
         - "ares.workshop.com" # <--- 改成你的專屬 Domain e.g. ares.workshop.com
         - "sit.ares.workshop.com"
         - "prod.ares.workshop.com"

@@ -32,9 +32,7 @@
         // pingpong
         curl -HHost:"ares.workshop.com" -H Authorization:1234 http://10.20.0.164:31380/public/api/pingpong -L -v
         // 測試 Auth forward，可修改 Authorization 戳看看
-        curl -HHost:"ares.workshop.com" -H Authorization:1234 http://10.20.0.164:31380/private/api/auth-info\?foo\=bar -L -v
-        // 檢查 Access Log
-        curl -HHost:"ares.workshop.com" -H Authorization:1234 -X POST --data "{\"foo\":\"bar\"}"  http://10.20.0.164:31380/private/api/auth-info 
+        curl -HHost:"ares.workshop.com" -H Authorization:1234 -X POST --data "{\"foo\":\"bar\"}"  http://10.20.0.164:31380/private/pingpong/auth-info\?foo\=bar  -v
     ````
 
 ## 觀察grpc流向(注入前)
@@ -86,8 +84,9 @@
 ````
 kubectl apply -f deployment/auth-filter.yaml -n ${NAMESPACE}
 ````
-
-戳看看: 
+* lua httpCall 目標 service 無法套用 virtual service rule
+ 
+* 戳看看: 
 ````
 curl -HHost:<你的專屬 domain> -H Authorization:6666  http://$INGRESS_HOST/api/pingpong
 // response: {Code: "40300", Msg: "identity deny"}
