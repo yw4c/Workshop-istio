@@ -16,6 +16,8 @@ spec:
     - match:
         - uri:
             regex: .*\/(private|public)\/api\/.*
+      # 超時回覆  504 Gateway Timeout
+      timeout: 2s
       route:
         - destination:
             host: ws001-api
@@ -70,10 +72,16 @@ metadata:
   name: ws002-pingpong
 spec:
   hosts:
-    # svc name
+    # host name : service dns 會自動轉換為正規名稱
     - ws002-pingpong
   http:
-    - route:
+#    - fault:
+#        # timout 測試
+#        delay:
+#          fixedDelay: 10s
+#          percentage:
+#            value: 100
+      route:
         # gRPC
         - destination:
             host: ws002-pingpong
