@@ -7,6 +7,7 @@
 * [GatewayCRD](#GatewayCRD)
 * [觀察指標(metrics)](#觀察指標(metrics))
 * [鏈路追蹤](#鏈路追蹤)
+* [Retry](#retry)
 
 ## Quick Start
 1. Clone me
@@ -142,7 +143,7 @@ curl -HHost:<你的專屬 domain> -H Authorization:1234  http://$INGRESS_HOST/ap
 * 需轉發請求表頭
     * 接收 http header 轉 grpc metadata, 參考 ws001 main.go
     * grpc 接收參考 ws002 main.go
-* 調整採樣，預設是1%機率。適用 demo profile 則是預設100% 
+* 調整採樣，預設是1%機率(適合壓測)。適用 demo profile 則是預設100% 
 ````
     nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
 ````
@@ -153,3 +154,8 @@ curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 * 前往 http://localhost:15032/ 查看你的 service.namespace
 
 
+## Retry
+從 ws001 戳看看
+```sh
+    grpcurl  -plaintext -d '{"InjectTimeout": "0", "InjectErrorCode": "1"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint
+```
