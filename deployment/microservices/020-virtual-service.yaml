@@ -98,9 +98,8 @@ spec:
 
       # 重試
       retries:
-        attempts: 3 # 共 n+1 次
-        perTryTimeout: 2s
+        # 共 n+1 次, 關閉 retry 設0 (預設2：所有錯誤)
+        attempts: 5
+        perTryTimeout: 10s
         retryOn: unavailable,cancelled
 
-        # 關閉 retry
-#        attempts: 0

@@ -24,6 +24,17 @@ spec:
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN
+    connectionPool:
+      # http 適用 HTTP1.1/HTTP2/GRPC
+      http:
+#        http2MaxRequests: 5
+        # 併發測試成功 10 Requests/ 3 Success / 3 Retry Success / Total 6 Success (Same as access log)
+        maxRequestsPerConnection: 5
+    outlierDetection:
+      consecutiveErrors: 1
+      interval: 1s
+      baseEjectionTime: 3s
+      maxEjectionPercent: 100
   subsets:
     - name: blue
       labels:

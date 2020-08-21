@@ -148,14 +148,43 @@ curl -HHost:<你的專屬 domain> -H Authorization:1234  http://$INGRESS_HOST/ap
     nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
 ````
 * 再戳看看
-````
+````sh
 curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
 ````
 * 前往 http://localhost:15032/ 查看你的 service.namespace
 
 
 ## Retry
+example
+```yaml
+      retries:
+        attempts: 5
+        perTryTimeout: 10s
+        retryOn: unavailable,cancelled
+```
 從 ws001 戳看看
 ```sh
     grpcurl  -plaintext -d '{"InjectTimeout": "0", "InjectErrorCode": "1"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint
 ```
+
+## 熔斷
+example
+```yaml
+      http:
+        maxRequestsPerConnection: 5
+    outlierDetection:
+      consecutiveErrors: 1
+      interval: 1s
+      baseEjectionTime: 3s
+      maxEjectionPercent: 100
+```
+
+
+撰寫一小壓腳本
+
+````bash
+xargs -I $ -n1  -P10  sh -c "grpcurl -plaintext -d '{\"InjectTimeout\": \"5\", \"InjectErrorCode\": \"0\"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint" \
+< <(printf '%s\n' {1..10})
+````
+
+併發測試成功 10 Requests/ 3 Success / 3 Retry Success / Total 6 Success (Same as access log)
