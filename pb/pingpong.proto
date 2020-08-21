@@ -10,4 +10,6 @@ message PingPong{
   int64 ping =1;
   int64 pong =2;
   int64 next =3;
+  int64 InjectTimeout=4; // infect timeout with second
+  uint32 InjectErrorCode=5; // inject error with gRPC error code
 }

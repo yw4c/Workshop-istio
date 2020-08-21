@@ -81,7 +81,7 @@ spec:
 #          fixedDelay: 10s
 #          percentage:
 #            value: 100
-      route:
+    - route:
         # gRPC
         - destination:
             host: ws002-pingpong
@@ -95,3 +95,12 @@ spec:
               number: 7002
             subset: green
           weight: 0
+
+      # 重試
+      retries:
+        attempts: 3 # 共 n+1 次
+        perTryTimeout: 2s
+        retryOn: unavailable,cancelled
+
+        # 關閉 retry
+#        attempts: 0
