@@ -1,175 +1,127 @@
-# Content
-* [Quick Start](#Quick-Start)
-* [觀察grpc流向(注入前)](#觀察grpc流向(注入前))
-* [注入sidecar](#注入sidecar)
-* [EnvoyFilter](#EnvoyFilter)
-* [金絲雀部署](#金絲雀部署)
-* [GatewayCRD](#GatewayCRD)
-* [觀察指標(metrics)](#觀察指標(metrics))
-* [鏈路追蹤](#鏈路追蹤)
-* [Retry](#retry)
+# Workshop Istio
+## Content
+* [Deploy microservices](#Deploy-microservices)
+* [gRPC LB](#grpc-lb)
+* [Sidecar Injection](#Sidecar-Injection)
+* [Entry traffic](#Entry-traffic)
+    * [API Gateway](#API-Gateway)
+    * [Forward Auth](#Forward-Auth)
+* [Service traffic](#Service-traffic)
+    * [Canary Deployment](#Canary-Deployment)
+    * [Retrying](#retrying)
+    * [Circuit breaker](#Circuit-breaker)
+* [Monitoring](#Monitoring)
+* [Tracing](#Tracing)
 
-## Quick Start
-1. Clone me
-    ````
-        git clone https://gitlab.silkrode.com.tw/team_golang/workshop-istio.git &&
-        cd workshop-istio &&
-        git submodule update --init --recursive &&
-        git submodule foreach git pull origin master &&
-        git submodule foreach git checkout master 
-    ````
 
-1. 部署微服務
-    ````
-        export NAMESPACE=<your name>
-        kubectl apply -f deployment/microservices -n ${NAMESPACE}
-    ````
-1. 部署 EnvoyFilter, 這裡的 CRDs 有順序性, 勿使用 apply -f 路徑， 若順序有異動要全砍重跑
-    ````
-        make reload-ordering
-    ````
-1. test accesslog-filter
-    ````
-        // pingpong
-        curl -HHost:"ares.workshop.com" -H Authorization:1234 http://10.20.0.164:31380/public/api/pingpong -L -v
-        // 測試 Auth forward，可修改 Authorization 戳看看
-        curl -HHost:"ares.workshop.com" -H Authorization:1234 -X POST --data "{\"foo\":\"bar\"}"  http://10.20.0.164:31380/private/pingpong/auth-info\?foo\=bar  -v
-    ````
+## Deploy microservices
 
-## 觀察grpc流向(注入前)
+````shell script
+export NAMESPACE=<your name>
+kubectl apply -f deployment/microservices -n ${NAMESPACE}
+````
 
-1. 透果 proxy 從本地訪問 ws001-api
-    ````
-      nohup kubectl port-forward service/ws001-api 8080:7001 -n ${NAMESPACE} &
-    ````
+## gRPC LB
 
-1. 查看 ws002-pingpong 每個 pod log, 看看是否被調用
+1. Make forward connection
+    ```shell script
+    nohup kubectl port-forward service/ws001-api 8080:7001 -n ${NAMESPACE} &
+    ```
 
-1. 監控 pod 1
-    ````
+1. Monitor logs
+    * Pod 1
+    ````shell script
      kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
         app=ws002-pingpong | sed -n 1p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
     ````
+   * pod 2 
+   ````shell script
+    kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
+       app=ws002-pingpong | sed -n 2p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
+   ````
 
-1. 打打看 > curl http://localhost:8080/api/pingpong
+1. Test ```curl http://localhost:8080/api/pingpong```
 
-1. 監控 pod 2 
-    ````
-     kubectl logs -f $(kubectl get pods --template '{{range .items}}{{.metadata.name}}{{"\n"}}{{end}}' -n ${NAMESPACE} -l \
-        app=ws002-pingpong | sed -n 2p) -c ws002-pingpong --tail=10 -n ${NAMESPACE}
-    ````
-
-* 使用 service, 我們發現 grpc 無法實現負載平衡. 
-* kube-proxy 只有在連線建立的當下，才成功做了負載均衡，之後的每一次 RPC 請求，都會利用原本的連線。
+* We found gRPC Load Balance is not available. 
+* kube-proxy supports only L4, so long connection wouldn't be redispatch.
 
 
-## 注入sidecar
-注入條件
-* 带有 metadata.labels.app  标签（label） 的 Deployment
-* 带有 spec.ports.name  的 Service
-
-開始注入
-````
-    # 新產生的 pod 會自動套用
+## Sidecar Injection 
+* Condition
+    * Deployment has metadata.labels.app label.
+    * Service resource must to has spec.ports.name.
+    
+* Inject
+    ````shell script
+    # All new created pod will genarate sidecar
     kubectl label namespace $NAMESPACE  istio-injection=enabled
 
-    # 直接套用在現有的 pod
+    # Inject all exist pod
     kubectl apply -f <(istioctl kube-inject -f deployment/workshop.yaml) -n ${NAMESPACE}
-````
-* 回上一步試看看，使否是已預設輪循方式分流
 
-## EnvoyFilter
-* ws003 負責用戶 token 驗證, 我們預設 Authorization:1234 就放行
+    # Deploy access log recorder
+    kubectl apply -f ./deployment/http-filter/040-accesslog-filter.yaml -n ${NAMESPACE}
+    ````
+* back to [gRPC LB](#grpc-lb). gRPC LB has been worked well.
+
+## Entry traffic 
+* Request through API Gateway and Forward auth
 ![private request flow](https://www.websequencediagrams.com/cgi-bin/cdraw?lz=dGl0bGUgUHJpdmF0ZSBSZXF1ZXN0IEZsb3cKCktPL0tNIFxuIEZyb250ZW5kLT7lhaXlj6PntrLpl5wgXG4gaXN0aW8taW5ncmVzc2dhdGV3YXk6CgACJC0-SFRUUAA7DyAAPAcgQ1JEOiBbT10gaHR0cDovL2tiYy5iYWNrZW5kLmNvbSBcbltYABQJNjY2ABAFCgAzHy0-U2VydmljZSBQcm94eQBsClZpcnR1YWwAFggAdAkvcHVibGljL2FwaSBcbgAMBgCCJAYvYXBpCgAlKS0-QXV0aCBNaWRkbGV3YXJlAIFnCkVudm95RmlsdGVyAIFvBiBsYWJlbACCVwVkZW50aXR5LXZhbGlkYXRpb246ZW5hYmxlZAoAKCgtPkkAPwcgAIF1BwCBUggAg2sHAIJDBgCBYgcKAB0QACwT6amX6K2JIHRva2VuAB0TAIE_Kk9LIQCBHCtDZXJ0YWluAIE9CQoAAg8tPgCFHRE6Cg&s=napkin)
-* 我們部署一 EnvoyFilter 中間層
-````
-kubectl apply -f deployment/auth-filter.yaml -n ${NAMESPACE}
-````
-* lua httpCall 目標 service 無法套用 virtual service rule
- 
-* 戳看看: 
-````
-curl -HHost:<你的專屬 domain> -H Authorization:6666  http://$INGRESS_HOST/api/pingpong
-// response: {Code: "40300", Msg: "identity deny"}
-curl -HHost:<你的專屬 domain> -H Authorization:1234  http://$INGRESS_HOST/api/pingpong
-// response {"msg": "we got auth info {user-id:1}"}
-````
 
-## 金絲雀部署
-* 修改 virtual service 權重
-````
- kubectl apply -f deployment/microservices/020-virtual-service.yaml -n ares  
-````
-* 部署流程範例：
-    1. 部署前：green weight 0%, replica = 0; blue weight 100%, replica = 2
-    1. 升級 green 到新版本 : green weight 0%, replica = 2; blue weight 100%, replica = 2
-    1. 將一半流量導到 green, 此時4個 pod 共同負載 : green weight 50%, replica = 2; blue weight 50%, replica = 2
-    1. 轉移全部流量 -  green weight 100%, replica = 2; blue weight 0%, replica = 2
-    1. 穩定後關閉 blue - green : green weight 100%, replica = 2; blue weight 0%, replica = 0
+### API Gateway 
 
-
-## GatewayCRD
-1. 在 deployment/gateway.yaml 更換專屬你的 domain
-1. 部署 gateway 和路由規則
+1. Set up your domain in deployment/gateway.yaml 
+1. Deploy gateway CRD.
     ````
-        kubectl apply -f deployment/gateway.yaml -n ${NAMESPACE}
+    kubectl apply -f deployment/gateway.yaml -n ${NAMESPACE}
     ````
-1. 取得叢集 istio-gateway 的 host ip
+1. Get external address
     ````
-        export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    export INGRESS_HOST=$(kubectl -n istio-system get service istio-ingressgateway -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     ````
-1. 我們對 host name, prefix path 套用規則。試著請求看看
+1. We set rule of host name, prefix path, let's test is it matched.
     ````
-        [O] curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong 
-        [X] curl   http://$INGRESS_HOST/api/pingpong 
-        [X] curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/
+    [O] curl -HHost:<name>.workshop.com http://$INGRESS_HOST/api/pingpong 
+    [X] curl   http://$INGRESS_HOST/api/pingpong 
+    [X] curl -HHost:<name>.workshop.com http://$INGRESS_HOST/
      ````
+### Forward Auth
+* Deploy EnvoyFilter CRD
+    ```shell script
+    kubectl apply -f ./deployment/http-filter/030-auth-filter.yaml -n ${NAMESPACE}
+    ```
+* Test : ws003 service response for validate JWT, we assume 1234 is correct token
    
+    ````
+    curl -HHost:<name>.workshop.com -H Authorization:6666  http://$INGRESS_HOST/api/pingpong
+    // response: {Code: "40300", Msg: "identity deny"}
+    curl -HHost:<name>.workshop.com -H Authorization:1234  http://$INGRESS_HOST/api/pingpong
+    // response {"msg": "we got auth info {user-id:1}"}
+    ````
+* lua httpCall() can't through virtual service rule
 
-## 觀察指標(metrics)
-* 为了监控服务行为，Istio 为服务网格中所有出入的服务流量都生成了指标。这些指标提供了关于行为的信息，例如总流量数、错误率、retry、熔斷、和请求响应时间等。
-````
- nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
-````
+## Service traffic
+![.](assets/diagram.jpeg)
+### Retrying
+* Retrying will execute in background.
+* Default is enable. Turn off if you don't wanna retry.
 
-* 觀測 ws002-pingpong 的被請求紀錄與流量，打開 http://127.0.0.1:9090/ ， 在 query 搜尋
-````
-    istio_requests_total{destination_service="ws002-pingpong.< 你的 NAMESPACE >.svc.cluster.local"}
-````
-* 指標參考: https://www.servicemesher.com/envoy/configuration/cluster_manager/cluster_stats.html
-
-
-## 鏈路追蹤
-* 需轉發請求表頭
-    * 接收 http header 轉 grpc metadata, 參考 ws001 main.go
-    * grpc 接收參考 ws002 main.go
-* 調整採樣，預設是1%機率(適合壓測)。適用 demo profile 則是預設100% 
-````
-    nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
-````
-* 再戳看看
-````sh
-curl -HHost:<你的專屬 domain> http://$INGRESS_HOST/api/pingpong
-````
-* 前往 http://localhost:15032/ 查看你的 service.namespace
-
-
-## Retry
-example
-```yaml
+    ```yaml
       retries:
         attempts: 5
         perTryTimeout: 10s
         retryOn: unavailable,cancelled
-```
-從 ws001 戳看看
-```sh
-    grpcurl  -plaintext -d '{"InjectTimeout": "0", "InjectErrorCode": "1"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint
-```
+    ```
 
-## 熔斷
-example
-```yaml
+* Test with injecting error
+
+    ```
+    grpcurl  -plaintext -d '{"InjectTimeout": "0", "InjectErrorCode": "1"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint
+    ```
+
+### Circuit breaker
+* Remove from Loading pool when match condition.
+    ```yaml
       http:
         maxRequestsPerConnection: 5
     outlierDetection:
@@ -177,14 +129,52 @@ example
       interval: 1s
       baseEjectionTime: 3s
       maxEjectionPercent: 100
-```
+    ```
+
+* Have a simple stress test 
+    ````bash
+    xargs -I $ -n1  -P10  sh -c "grpcurl -plaintext -d '{\"InjectTimeout\": \"5\", \"InjectErrorCode\": \"0\"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint" \
+    < <(printf '%s\n' {1..10})
+    ````
 
 
-撰寫一小壓腳本
+### Canary Deployment
+* We can adjust weight in virtual service
+    ````
+     kubectl apply -f deployment/microservices/020-virtual-service.yaml -n ares  
+    ````
+* Example of Blue/Green deployment flow：
 
-````bash
-xargs -I $ -n1  -P10  sh -c "grpcurl -plaintext -d '{\"InjectTimeout\": \"5\", \"InjectErrorCode\": \"0\"}' ws002-pingpong:7002 pingpong.PingPongService/PingPongEndpoint" \
-< <(printf '%s\n' {1..10})
-````
+    |steps| |Blue weight|Green weight|Blue replica|  Green replica|
+    |---|---|---|---|---|---|
+    |1|Before deployment|100%|0%| 2|0|
+    |2|Deploy on Green|100%|0%| 2|2(new version)|
+    |4|Switch all traffic|0%|100%| 2|2|
+    |5|Release old pods when stable |0%|100%| 0|2|
 
-併發測試成功 10 Requests/ 3 Success / 3 Retry Success / Total 6 Success (Same as access log)
+## Monitoring
+* Make a connection to prometheus
+    ````
+     nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=prometheus -o jsonpath='{.items[0].metadata.name}') 9090:9090 &
+    ````
+
+* Watch the request metrics of ws002-pingpong service on http://127.0.0.1:9090/
+    ````
+    istio_requests_total{destination_service="ws002-pingpong.<namesapce>.svc.cluster.local"}
+    ````
+* refer [envoy metrics](https://www.servicemesher.com/envoy/configuration/cluster_manager/cluster_stats.html) 
+
+
+## Tracing
+* We have to redirect B3-tracing header from http to gRPC
+    * Redirecting header. refer [injectHeadersIntoMetadata](ws001-api/main.go)
+* Make a connection to jaeger 
+    ````
+    nohup kubectl -n istio-system port-forward $(kubectl -n istio-system get pod -l app=jaeger -o jsonpath='{.items[0].metadata.name}') 15032:16686 &
+    ````
+* Hit endpoint
+    ````sh
+    curl -HHost:<name>.workshop.com http://$INGRESS_HOST/api/pingpong
+    ````
+* Goto http://localhost:15032/ and select your namespace
+
